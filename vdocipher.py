@@ -59,14 +59,24 @@ def get_mpd(video_id: str) -> str:
         'referer': 'https://dev.vdocipher.com/'
     }
     url = 'https://dev.vdocipher.com/api/meta/' + video_id
-    req = requests.get(url, headers=headers)
-    resp = req.json()
-    return resp['dash']['manifest']
+    req = None
+    try:
+        req = requests.get(url, headers=headers)
+        resp = req.json()
+        return resp['dash']['manifest']
+    except:  # pylint:disable=bare-except # Catch all in case a 200 doesn't contain the license
+        print("Failed getting the MPD:\n", req.text)
+        sys.exit(1)
 
 
 def get_pssh(mpd: str):
-    req = requests.get(mpd)
-    return re.search('<cenc:pssh>(.*)</cenc:pssh>', req.text).group(1)
+    req = None
+    try:
+        req = requests.get(mpd)
+        return re.search('<cenc:pssh>(.*)</cenc:pssh>', req.text).group(1)
+    except:  # pylint:disable=bare-except # Catch all in case a 200 doesn't contain the license
+        print("Failed getting the PSSH:\n", req.text)
+        sys.exit(1)
 
 
 def get_license_response(license_challenge: str, mpd: str, video_reference: str):
@@ -78,13 +88,18 @@ def get_license_response(license_challenge: str, mpd: str, video_reference: str)
         'vdo-ref': video_reference
     }
 
-    req = requests.post(
-        'https://license.vdocipher.com/auth',
-        json={'token': license_challenge},
-        headers=headers
-    )
-    resp = req.json()
-    return resp['license']
+    req = None
+    try:
+        req = requests.post(
+            'https://license.vdocipher.com/auth',
+            json={'token': license_challenge},
+            headers=headers
+        )
+        resp = req.json()
+        return resp['license']
+    except:  # pylint:disable=bare-except # Catch all in case a 200 doesn't contain the license
+        print("Failed getting license response:\n", req.text)
+        sys.exit(1)
 
 
 def setup_license_challenge(token: str, challenge: bytes):
